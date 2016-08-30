@@ -23,4 +23,6 @@ public:
 	string float_to_string(float input);
 	/*double转string*/
 	string double_to_string(double input);
+	/*char转int*/
+	int char_to_int(char input);
 };

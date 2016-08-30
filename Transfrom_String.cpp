@@ -38,3 +38,13 @@ string Transfrom_String::double_to_string(double input)
 	out_put = temp;
 	return out_put;
 }
+
+//char转int
+int Transfrom_String::char_to_int(char input)
+{
+	int s;
+	s = input - 48;
+	return s;
+}
+
+

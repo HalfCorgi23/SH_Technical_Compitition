@@ -13,10 +13,15 @@
 #include <opencv2/ml/ml.hpp>
 #include <vector>
 
-#define CAMERA_NUM 1
+#define CAMERA_NUM_0 0
+#define CAMERA_NUM_1 1
 #define RAD_ANGLE 57.2956
 #define THRESHOLD_MAX 40
 #define THRESHOLD_MIN 10
+
+#define THRESHOLD_MAX_BOX 40
+#define THRESHOLD_MIN_BOX 70
+
 #define THRESHOLD_LASER 252
 #define CAMERA_WIDTH 640
 #define CAMERA_HEIGHT 480
@@ -26,7 +31,8 @@ using namespace cv;
 using namespace ml;
 
 Transfrom_String trans_str;//各种转string
-Serial_Connect serial_conn;//声明串口
+Serial_Connect serial_conn_0(5);//声明梯形板串口
+Serial_Connect serial_conn_1(4);//声明Arduino板串口
 
 Continuous_Buffer buffer_angle;//角度连续缓冲区
 Continuous_Buffer buffer_edge;//边界连续缓冲区
@@ -98,7 +104,6 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, yellow, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, yellow, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
 	else if (x > 240 && x < 400 && y <= 180)
 	{
@@ -110,7 +115,6 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, yellow, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, yellow, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
 	else if (x >= 400 && y <= 180)
 	{
@@ -122,7 +126,6 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, yellow, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, yellow, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
 	else if (x <= 240 && y > 180 && y < 300)
 	{
@@ -134,9 +137,8 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, yellow, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, yellow, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
-	else if (x > 240 && x < 400 && y > 180 && y < 300)//已瞄准
+	else if (x > 240 && x < 400 && y > 180 && y < 300)
 	{
 		line(input, ui_1, ui_2, red, 2, 8, 0);
 		line(input, ui_2, ui_3, red, 2, 8, 0);
@@ -146,7 +148,6 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET AIMED", Point(text_x, text_y_1), 2, 1, red, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, red, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, red, 2, 8, false);
-		serial_conn.Serial_Write("2");
 	}
 	else if (x >= 400 && y > 180 && y < 300)
 	{
@@ -158,7 +159,6 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, yellow, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, yellow, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
 	else if (x <= 240 && y >= 300)
 	{
@@ -170,7 +170,6 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, yellow, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, yellow, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
 	else if (x > 240 && x < 400 && y >= 300)
 	{
@@ -182,7 +181,6 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, yellow, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, yellow, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
 	else if (x >= 400 && y >= 300)
 	{
@@ -194,9 +192,13 @@ void UI_Display(Mat input,int x,int y,string angle,string distance)
 		putText(input, "TARGET FOUND", Point(text_x, text_y_1), 2, 1, yellow, 2, 8, false);
 		putText(input, dis_out, Point(text_x, text_y_2), 1, 1, white, 2, 8, false);
 		putText(input, ang_out, Point(text_x, text_y_3), 1, 1, white, 2, 8, false);
-		serial_conn.Serial_Write("1");
 	}
 
+}
+
+void Serial_Connection(int x, int y)
+{
+	serial_conn_0.Send_Command(x, y);
 }
 
 /*激光测距*/
@@ -239,6 +241,7 @@ bool Target_Find(Mat input)
 	GaussianBlur(source, gauss, Size(15, 15), 3, 3);
 	cvtColor(gauss, gray, CV_BGR2GRAY);//彩色转灰度
 	GaussianBlur(gray, gauss, Size(15, 15), 3, 3);
+	imshow("灰度图像", gauss);
 	threshold(gauss, theshold, THRESHOLD_MAX, 255, CV_THRESH_TOZERO_INV);//阈值限制
 	bitwise_not(theshold, gray);//取反色
 	threshold(gray, theshold, (255-THRESHOLD_MIN), 255, CV_THRESH_BINARY);//阈值限制
@@ -258,90 +261,277 @@ bool Target_Find(Mat input)
 			maxContour = contours[i];
 		}
 	}
-	ellip = fitEllipse(maxContour);
-	int ellipse_1_x = ellip.center.x;//目标中心x
-	int ellipse_1_y = ellip.center.y;//目标形中心y
-	float ellipse_1_height = ellip.size.width;//目标长轴
-	float ellipse_1_width = ellip.size.height;//目标长轴
-	float target_rad = acos(ellip.size.width / ellip.size.height);
-	float target_angle = RAD_ANGLE * target_rad-6.0;
-	////提取目标
-	int target_row_min = buffer_edge.Vertical_Buffer(ellip.center.y - ellip.size.height / 2 + 5);//目标最大纵坐标
-	int target_row_max = buffer_edge.Vertical_Buffer(ellip.center.y + ellip.size.height / 2 - 5);//目标最小纵坐标
-	int target_col_min = buffer_edge.Horizon_Buffer(ellip.center.x - ellip.size.width / 2 + 5);//目标最小横坐标
-	int target_col_max = buffer_edge.Horizon_Buffer(ellip.center.x + ellip.size.width / 2 - 5);//目标最大横坐标
-	target = gray2.rowRange(target_row_min, target_row_max);
-	target_temp = target.colRange(target_col_min, target_col_max);
-	bitwise_not(target_temp, target);
-	///椭圆验证
-	findContours(target, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	maxArea = 0;//最大连通域面积
-	maxContour;//最大连通域
-	for (size_t i = 0; i < contours.size(); i++)//寻找最大连通域
+	if (maxArea > 36)
 	{
-		double area = contourArea(contours[i]);
-		if (area > maxArea)
+		ellip = fitEllipse(maxContour);
+		int ellipse_1_x = ellip.center.x;//目标中心x
+		int ellipse_1_y = ellip.center.y;//目标形中心y
+		float ellipse_1_height = ellip.size.width;//目标长轴
+		float ellipse_1_width = ellip.size.height;//目标短轴
+		float target_rad = acos(ellip.size.width / ellip.size.height);
+		float target_angle = RAD_ANGLE * target_rad - 6.0;
+		if (target_angle < 50)
 		{
-			maxArea = area;
-			maxContour = contours[i];
+			if (ellipse_1_x > 10 && ellipse_1_x<630 && ellipse_1_y > 10 && ellipse_1_y<470)
+			{
+				
+				////提取目标
+				int target_row_min = buffer_edge.Vertical_Buffer(ellip.center.y - ellip.size.height / 2);//目标最大纵坐标
+				int target_row_max = buffer_edge.Vertical_Buffer(ellip.center.y + ellip.size.height / 2);//目标最小纵坐标
+				int target_col_min = buffer_edge.Horizon_Buffer(ellip.center.x - ellip.size.width / 2);//目标最小横坐标
+				int target_col_max = buffer_edge.Horizon_Buffer(ellip.center.x + ellip.size.width / 2);//目标最大横坐标
+				buffer_edge.Min_Max_Adjust(target_row_min, target_row_max);
+				buffer_edge.Min_Max_Adjust(target_col_min, target_col_max);
+				target = gray2.rowRange(target_row_min, target_row_max);
+				target_temp = target.colRange(target_col_min, target_col_max);
+				bitwise_not(target_temp, target);
+				///椭圆验证
+				findContours(target, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+				maxArea = 0;//最大连通域面积
+				maxContour;//最大连通域
+				double area;
+				for (size_t i = 0; i < contours.size(); i++)//寻找最大连通域
+				{
+					area = contourArea(contours[i]);
+					if (area > maxArea)
+					{
+						maxArea = area;
+						maxContour = contours[i];
+					}
+				}
+				if (area > 36)
+				{
+					ellip = fitEllipse(maxContour);
+					int ellipse_2_x = ellip.center.x;//大矩形中心x
+					int ellipse_2_y = ellip.center.y;//大矩形中心y
+					int distance_center = (ellipse_2_x - target.cols / 2)*(ellipse_2_x - target.cols / 2) + (ellipse_2_y - target.rows / 2)*(ellipse_2_y - target.rows / 2);
+					//circle(source, Point(320, 240), 8, Scalar(0, 0, 255), 3, 8, 0);
+					circle(source, Point(320, 240), 3, Scalar(0, 0, 255), 3, 8, 0);
+					if (distance_center < 100)
+					{
+						circle(source, Point(ellipse_1_x, ellipse_1_y), ellipse_1_height / 2, Scalar(0, 255, 0), 2, 8, 0);
+						circle(source, Point(ellipse_1_x, ellipse_1_y), ellipse_1_width / 2, Scalar(0, 255, 0), 2, 8, 0);
+						string angle_output = trans_str.float_to_string(buffer_angle.Output(target_angle));
+						putText(source, angle_output, Point(ellipse_1_x, ellipse_1_y), 1, 1, Scalar(255, 0, 0, 255), 2, false);
+						UI_Display(source, ellipse_1_x, ellipse_1_y, angle_output, "-");
+						Serial_Connection(ellipse_1_x, ellipse_1_y);
+						imshow("椭圆检测", source);
+						return true;
+					}
+					else
+					{
+						UI_Display(source, -1, -1, "-", "-");
+						Serial_Connection(-1, -1);
+						imshow("椭圆检测", source);
+						return false;
+					}
+				}
+				else
+				{
+					UI_Display(source, -1, -1, "-", "-");
+					Serial_Connection(-1, -1);
+					imshow("椭圆检测", source);
+					return false;
+				}
+			}
+			else
+			{
+				UI_Display(source, -1, -1, "-", "-");
+				Serial_Connection(-1, -1);
+				imshow("椭圆检测", source);
+				return false;
+			}
+		}
+		else
+		{
+			UI_Display(source, -1, -1, "-", "-");
+			Serial_Connection(-1, -1);
+			imshow("椭圆检测", source);
+			return false;
 		}
 	}
-	ellip = fitEllipse(maxContour);
-	int ellipse_2_x = ellip.center.x;//大矩形中心x
-	int ellipse_2_y = ellip.center.y;//大矩形中心y
-	int distance_center = (ellipse_2_x - target.cols / 2)*(ellipse_2_x - target.cols / 2) + (ellipse_2_y - target.rows / 2)*(ellipse_2_y - target.rows / 2);
-	//circle(source, Point(320, 240), 8, Scalar(0, 0, 255), 3, 8, 0);
-	circle(source, Point(320, 240), 3, Scalar(0, 0, 255), 3, 8, 0);
-	if (distance_center < 100)
-	{
-		circle(source, Point(ellipse_1_x, ellipse_1_y), ellipse_1_height / 2, Scalar(0, 255, 0), 2, 8, 0);
-		circle(source, Point(ellipse_1_x, ellipse_1_y), ellipse_1_width / 2, Scalar(0, 255, 0), 2, 8, 0);
-		string angle_output = trans_str.float_to_string(buffer_angle.Output(target_angle));
-		putText(source, angle_output, Point(ellipse_1_x, ellipse_1_y), 1, 1, Scalar(255, 0, 0, 255), 2, false);
-		UI_Display(source, ellipse_1_x, ellipse_1_y, angle_output, "-");
-		imshow("椭圆检测", source);
-		return true;
-	}
-	
 	else
 	{
 		UI_Display(source, -1, -1, "-", "-");
+		Serial_Connection(-1, -1);
 		imshow("椭圆检测", source);
 		return false;
 	}
 }
 
+/*弹盒识别*/
+int Bullet_Box(Mat input,int sensor_statue)
+{
+	source = input.clone();
+	cvtColor(source, gray, CV_BGR2GRAY);//彩色转灰度
+	threshold(gray, theshold, THRESHOLD_MAX_BOX, 255, CV_THRESH_TOZERO_INV);//阈值限制
+	bitwise_not(theshold, gray);//取反色
+	threshold(gray, theshold, (255 - THRESHOLD_MIN_BOX), 255, CV_THRESH_BINARY);//阈值限制
+	bitwise_not(theshold, gray);//取反色
+	gray2 = gray.clone();
+	imshow("反色图像", gray);
+	findContours(gray, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE); //寻找连通域
+	double maxArea2 = 0;//最大连通域面积
+	vector<cv::Point> maxContour;//最大连通域
+	for (size_t i = 0; i < contours.size(); i++)//寻找最大连通域
+	{
+		double area = contourArea(contours[i]);
+		if (area > maxArea2)
+		{
+			maxArea2 = area;
+			maxContour = contours[i];
+		}
+	}
+	if (maxArea2 > 300)
+	{
+		Rect maxRect = boundingRect(maxContour);
+		int target_x = maxRect.x;
+		int target_y = maxRect.y;
+		circle(source, Point(target_x, target_y), 10, Scalar(255, 0, 0, 255), 2, 8, 0);
+		imshow("弹盒识别", source);
+		switch (sensor_statue)
+		{
+		default:
+			serial_conn_0.Serial_Write("m");//车子随机前进
+			break;
+		case 2:
+			serial_conn_0.Serial_Write("e");//传感器左正对目标
+			break;
+		case 3:
+			serial_conn_0.Serial_Write("f");//传感器右正对目标
+			break;
+		case 4:
+			serial_conn_0.Serial_Write("g");//目标在传感器左侧
+			break;
+		case 5:
+			serial_conn_0.Serial_Write("h");//目标在传感器右侧
+			break;
+		case 6:
+			serial_conn_0.Serial_Write("i");//车在弹箱角处
+			break;
+		case 7:
+			if (target_x < 160)
+			{
+				serial_conn_0.Serial_Write("j");//车子可以向左前进
+			}
+			else if (target_x > 160)
+			{
+				serial_conn_0.Serial_Write("k");//车子可以向右前进
+			}
+			else
+			{
+				serial_conn_0.Serial_Write("l");//车子可以继续前进
+			}
+			break;
+		}
+	}
+	else
+	{
+		serial_conn_0.Serial_Write("m");//车子随机前进
+	}
+	return 0;
+}
+
+//主函数入口
 int main()
 {
-	VideoCapture capture(CAMERA_NUM);  //摄像头采集图像
+	char switch_0;//摄像头检测开关
+	VideoCapture capture(CAMERA_NUM_1);  //摄像头1采集图像
+	VideoCapture capture2(CAMERA_NUM_0);  //摄像头2采集图像
+
 	if (!capture.isOpened())
 	{
+		printf_s("1号摄像头连接失败！");
+		scanf_s(&switch_0);
 		return -1;
+	}
+	else
+	{
+		printf_s("1号摄像头连接成功！");
+	}
+	if (!capture2.isOpened())
+	{
+		printf_s("2号摄像头连接失败！");
+		scanf_s(&switch_0);
+		return -1;
+	}
+	else
+	{
+		printf_s("2号摄像头连接成功！");
 	}
 
 	bool stop = false;
 
-	capture >> source;
-	waitKey(100);
-	capture >> source;
-	waitKey(100);
-	Target_Find(source);
+	for (int i = 0; i < 30; i++)
+	{
+		capture >> source;
+		capture2 >> source;
+		waitKey(33);
+	}
 
-	//FileStorage MLP_File_Read("MLP\\MLP.xml", FileStorage::READ);
-	//MLP_File_Read["mlp_mat"] >> mlp;
-	//MLP_File_Read.release();
-	//imshow("特征矩阵", mlp);
+	int serial=serial_conn_0.Serial_Init();//初始化梯形板串口
+	if (serial == 0)
+	{
+		printf_s("梯形板串口打开成功！");
+		
+	}
+	else
+	{
+		printf_s("梯形板串口打开失败！");
+		scanf_s(&switch_0);
+	}
 
-	serial_conn.Serial_Init();//初始化串口
+	serial = serial_conn_1.Serial_Init();//初始化Arduino串口
+	if (serial == 0)
+	{
+		printf_s("Arduino板串口打开成功！");
+
+	}
+	else
+	{
+		printf_s("Arduino板串口打开失败！");
+		scanf_s(&switch_0);
+	}
+
+	int statue;//传感器状态
 
 	while (!stop)
 	{
-		capture >> source;
-		//imshow("原始图像", source);
-		Target_Find(source);
-		waitKey(10);
+		statue = trans_str.char_to_int(serial_conn_1.Serial_Read());
+		if (statue == 0)
+		{
+			capture >> source;
+			Target_Find(source);
+		}
+		else
+		{
+			capture2 >> source;
+			Bullet_Box(source, statue);
+		}
+		waitKey(33);
 	}
-	serial_conn.Serial_Close();
+
+	serial_conn_0.Serial_Close();
+	serial_conn_1.Serial_Close();
+	printf_s("程序即将退出！");
+	
+	//int serial = serial_conn_1.Serial_Init();//初始化Arduino串口
+	//if (serial == 0)
+	//{
+	//	printf_s("Arduino板串口打开成功！");
+
+	//}
+	//else
+	//{
+	//	printf_s("Arduino板串口打开失败！");
+	//}
+	//while (1)
+	//{
+	//	int statue = trans_str.char_to_int(serial_conn_1.Serial_Read());
+	//	printf_s("%c",statue);
+	//}
+
+	return 0;
 }
 
 

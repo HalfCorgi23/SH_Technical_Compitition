@@ -116,7 +116,7 @@ int Continuous_Buffer::Horizon_Buffer(int input)
 	}
 	else if(input < 0)
 	{
-		return 0;
+		return 1;
 	}
 	else
 	{
@@ -132,10 +132,21 @@ int Continuous_Buffer::Vertical_Buffer(int input)
 	}
 	else if (input < 0)
 	{
-		return 0;
+		return 1;
 	}
 	else
 	{
 		return input;
+	}
+}
+
+void Continuous_Buffer::Min_Max_Adjust(int min, int max)
+{
+	int temp;
+	if (min > max)
+	{
+		temp = max;
+		max = min;
+		min = temp;
 	}
 }

@@ -2,8 +2,8 @@
 #define INT_BUFFER 0
 #define FLOAT_BUFFER 1
 #define DOUBLE_BUFFER 2
-#define MAT_SIZE_HORIZON 640
-#define MAT_SIZE_VERTICAL 480
+#define MAT_SIZE_HORIZON 639
+#define MAT_SIZE_VERTICAL 479
 #define BUFFER_SIZE 100000
 
 
@@ -22,5 +22,7 @@ public:
 	int Horizon_Buffer(int input);
 	//纵坐标边界缓冲
 	int Vertical_Buffer(int input);
+	//极值调整
+	void Min_Max_Adjust(int min, int max);
 };
 

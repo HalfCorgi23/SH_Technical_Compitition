@@ -17,7 +17,7 @@ using namespace std;
 class Serial_Connect
 {
 public:
-	Serial_Connect();
+	Serial_Connect(int serial_num);
 	~Serial_Connect();
 
 	//初始化串口
@@ -26,8 +26,14 @@ public:
 	//写一位串口
 	void Serial_Write(char lpOut[1]);
 
+	/*读一位串口*/
+	char Serial_Read();
+
     //关闭串口
 	void Serial_Close();
+
+	//串口通信协议
+	void Send_Command(int x, int y);
 private:
 	HANDLE Handle_Comm; //创建串口
 };
