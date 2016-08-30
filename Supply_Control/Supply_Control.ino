@@ -7,7 +7,7 @@ const int photoswitch_1 = 3; //光电开关引脚#1
 const int photoswitch_2 = 4; //光电开关引脚#2
 const int photoswitch_3 = 5; //光电开关引脚#3
 const int photoswitch_4 = 6; //光电开关引脚#4
-
+const int handaozhi = 100;
 const int photogate_delay = 30;//弹仓传感器延迟
 
 int sensor_0; //弹仓传感器
@@ -38,7 +38,49 @@ void songdan(int a)
 
 void supply()
 {
-	Serial.begin(9600);
+	//Serial.begin(9600);
+
+
+
+	diantuigan(1000); //电推杆推（1000）
+	delay(10000); //电推杆推6s
+	diantuigan(1500); //电推杆停止（1500）
+	handaoo(handaozhi); //涵道开始
+	delay(2500); //涵道吸2.5s123456
+	handaoo(10); //涵道停止
+	songdan(70); //送弹70 舵机开 
+	delay(2000);
+	songdan(120); //送弹120 舵机闭合
+	delay(1000);
+	handaoo(handaozhi); //涵道吸
+	delay(2500); //涵道吸2.5s
+	handaoo(10); //涵道停止
+	delay(2000);
+	songdan(70); //送弹70 舵机开 
+	delay(2000);
+	diantuigan(2000); //电推杆收（2000）
+	delay(10000); //电推杆收6s
+	songdan(120); //送弹120 舵机闭合
+	delay(1500);
+	handaoo(handaozhi); //涵道吸
+	delay(2500); //涵道吸2.5s（空吸）
+	handaoo(10);  //涵道停
+	delay(1000);
+	songdan(70); //送弹70 舵机开
+	delay(1000);
+	handaoo(handaozhi); //涵道吸
+	delay(2500); //涵道吸2.5s（空吸+送弹开）
+	handaoo(10); //涵道关闭
+	delay(1500);
+	songdan(120); //送弹关闭
+	delay(2000);
+}
+
+// 初始设置
+void setup() {
+
+	delay(5000);
+	Serial.begin(115200);
 	handao.attach(A0);
 	tuigan.attach(A1);
 	duoji.attach(A2);
@@ -51,48 +93,7 @@ void supply()
 	delay(3000);
 	diantuigan(1500);  //电推杆停止
 	delay(2000);
-	diantuigan(1000); //电推杆推（1000）
-	delay(6000); //电推杆推6s
-	diantuigan(1500); //电推杆停止（1500）
-	handaoo(100); //涵道开始
-	delay(2500); //涵道吸2.5s
-	handaoo(10); //涵道停止
-	songdan(70); //送弹70 舵机开 
-	delay(2000);
-	songdan(120); //送弹120 舵机闭合
-	delay(1000);
-	handaoo(100); //涵道吸
-	delay(2500); //涵道吸2.5s
-	handaoo(10); //涵道停止
-	delay(2000);
-	songdan(70); //送弹70 舵机开 
-	delay(2000);
-	diantuigan(2000); //电推杆收（2000）
-	delay(6000); //电推杆收6s
-	songdan(120); //送弹120 舵机闭合
-	delay(1500);
-	handaoo(100); //涵道吸
-	delay(2500); //涵道吸2.5s（空吸）
-	handaoo(10);  //涵道停
-	delay(1000);
-	songdan(70); //送弹70 舵机开
-	delay(1000);
-	handaoo(100); //涵道吸
-	delay(2500); //涵道吸2.5s（空吸+送弹开）
-	handaoo(10); //涵道关闭
-	delay(1500);
-	songdan(120); //送弹关闭
-	delay(2000);
-}
-
-// 初始设置
-void setup() {
-	Serial.begin(115200);
-	sensor_0 = 0;
-	sensor_1 = 0;
-	sensor_2 = 0;
-	sensor_3 = 0;
-	sensor_4 = 0;
+	sensor_get();
 }
 
 //光电门信号读取，有遮挡输出0，无遮挡输出1
@@ -125,7 +126,8 @@ int photogate_get(int pin)
 //获取传感器状态
 int sensor_get()
 {
-	sensor_0 = photogate_get(photogate);
+	sensor_0 = digitalRead(photogate);
+	//sensor_0 = 1;
 	sensor_1 = digitalRead(photoswitch_1);
 	sensor_2 = digitalRead(photoswitch_2);
 	sensor_3 = digitalRead(photoswitch_3);
@@ -152,13 +154,17 @@ int sensor_get()
 		{
 			return 4;//目标在传感器左侧
 		}
-		else if (sensor_1 == 1 && sensor_2 == 0 && (sensor_3 == 0 || sensor_4 == 0))
+		else if (sensor_1 == 1 && sensor_2 == 1 && (sensor_3 == 0 || sensor_4 == 0))
 		{
 			return 5;//目标在传感器右侧
 		}
 		else if (sensor_1 == 1 && sensor_4 == 1 && (sensor_3 == 0 || sensor_2 == 0))
 		{
 			return 6;//车在弹箱角处
+		}
+		else if (sensor_1 == 1 && sensor_2 == 1 && sensor_3 == 1 && sensor_4 == 1)
+		{
+			return 8;//传感器无目标
 		}
 		else
 		{
@@ -175,4 +181,5 @@ void loop() {
 	{
 		supply();
 	}
+	delay(100);
 }

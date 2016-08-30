@@ -13,14 +13,15 @@
 #include <opencv2/ml/ml.hpp>
 #include <vector>
 
-#define CAMERA_NUM_0 0
-#define CAMERA_NUM_1 1
+#define CAMERA_NUM_0 1
+#define CAMERA_NUM_1 0
 #define RAD_ANGLE 57.2956
-#define THRESHOLD_MAX 40
-#define THRESHOLD_MIN 10
 
-#define THRESHOLD_MAX_BOX 40
-#define THRESHOLD_MIN_BOX 70
+#define THRESHOLD_MAX 40
+#define THRESHOLD_MIN 1
+
+#define THRESHOLD_MAX_BOX 130
+#define THRESHOLD_MIN_BOX 110
 
 #define THRESHOLD_LASER 252
 #define CAMERA_WIDTH 640
@@ -31,8 +32,8 @@ using namespace cv;
 using namespace ml;
 
 Transfrom_String trans_str;//各种转string
-Serial_Connect serial_conn_0(5);//声明梯形板串口
-Serial_Connect serial_conn_1(4);//声明Arduino板串口
+Serial_Connect serial_conn_0(4);//声明梯形板串口
+Serial_Connect serial_conn_1(6);//声明Arduino板串口
 
 Continuous_Buffer buffer_angle;//角度连续缓冲区
 Continuous_Buffer buffer_edge;//边界连续缓冲区
@@ -307,7 +308,7 @@ bool Target_Find(Mat input)
 					int distance_center = (ellipse_2_x - target.cols / 2)*(ellipse_2_x - target.cols / 2) + (ellipse_2_y - target.rows / 2)*(ellipse_2_y - target.rows / 2);
 					//circle(source, Point(320, 240), 8, Scalar(0, 0, 255), 3, 8, 0);
 					circle(source, Point(320, 240), 3, Scalar(0, 0, 255), 3, 8, 0);
-					if (distance_center < 100)
+					if (distance_center < 150)
 					{
 						circle(source, Point(ellipse_1_x, ellipse_1_y), ellipse_1_height / 2, Scalar(0, 255, 0), 2, 8, 0);
 						circle(source, Point(ellipse_1_x, ellipse_1_y), ellipse_1_width / 2, Scalar(0, 255, 0), 2, 8, 0);
@@ -362,73 +363,106 @@ bool Target_Find(Mat input)
 /*弹盒识别*/
 int Bullet_Box(Mat input,int sensor_statue)
 {
-	source = input.clone();
-	cvtColor(source, gray, CV_BGR2GRAY);//彩色转灰度
-	threshold(gray, theshold, THRESHOLD_MAX_BOX, 255, CV_THRESH_TOZERO_INV);//阈值限制
-	bitwise_not(theshold, gray);//取反色
-	threshold(gray, theshold, (255 - THRESHOLD_MIN_BOX), 255, CV_THRESH_BINARY);//阈值限制
-	bitwise_not(theshold, gray);//取反色
-	gray2 = gray.clone();
-	imshow("反色图像", gray);
-	findContours(gray, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE); //寻找连通域
-	double maxArea2 = 0;//最大连通域面积
-	vector<cv::Point> maxContour;//最大连通域
-	for (size_t i = 0; i < contours.size(); i++)//寻找最大连通域
+	printf_s("%d", sensor_statue);
+	if (sensor_statue == 8)
 	{
-		double area = contourArea(contours[i]);
-		if (area > maxArea2)
+		source = input.clone();
+		GaussianBlur(source, gauss, Size(15, 15), 3, 3);
+		cvtColor(gauss, gray, CV_BGR2GRAY);//彩色转灰度
+		imshow("弹盒识别4", gray);
+		threshold(gray, theshold, THRESHOLD_MAX_BOX, 0, CV_THRESH_TOZERO_INV);//阈值限制
+		imshow("弹盒识别2", theshold);
+		bitwise_not(theshold, gray);//取反色
+		imshow("弹盒识别3", gray);
+		threshold(gray, theshold, (255 - THRESHOLD_MIN_BOX), 255, CV_THRESH_BINARY);//阈值限制
+		imshow("弹盒识别4", theshold);
+		bitwise_not(theshold, gray);//取反色
+		gray2 = gray.clone();
+		imshow("反色图像", gray);
+		findContours(gray, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE); //寻找连通域
+		double maxArea2 = 0;//最大连通域面积
+		vector<cv::Point> maxContour;//最大连通域
+		Rect Rect_temp;
+		for (size_t i = 0; i < contours.size(); i++)//寻找最大连通域
 		{
-			maxArea2 = area;
-			maxContour = contours[i];
+			double area = contourArea(contours[i]);
+			if (area > maxArea2)
+			{
+				Rect_temp=boundingRect(contours[i]);
+				if ((Rect_temp.y+ Rect_temp.height/2) >= 160 && (Rect_temp.y + Rect_temp.height / 2) <= 320)
+				{
+					maxArea2 = area;
+					maxContour = contours[i];
+				}
+			}
 		}
-	}
-	if (maxArea2 > 300)
-	{
-		Rect maxRect = boundingRect(maxContour);
-		int target_x = maxRect.x;
-		int target_y = maxRect.y;
-		circle(source, Point(target_x, target_y), 10, Scalar(255, 0, 0, 255), 2, 8, 0);
-		imshow("弹盒识别", source);
-		switch (sensor_statue)
+		if (maxArea2 > 10000)
 		{
-		default:
-			serial_conn_0.Serial_Write("m");//车子随机前进
-			break;
-		case 2:
-			serial_conn_0.Serial_Write("e");//传感器左正对目标
-			break;
-		case 3:
-			serial_conn_0.Serial_Write("f");//传感器右正对目标
-			break;
-		case 4:
-			serial_conn_0.Serial_Write("g");//目标在传感器左侧
-			break;
-		case 5:
-			serial_conn_0.Serial_Write("h");//目标在传感器右侧
-			break;
-		case 6:
-			serial_conn_0.Serial_Write("i");//车在弹箱角处
-			break;
-		case 7:
+			Rect maxRect = boundingRect(maxContour);
+			int target_x = maxRect.x+ Rect_temp.width / 2;
+			int target_y = maxRect.y+Rect_temp.height / 2;
+			circle(source, Point(target_x + Rect_temp.width / 2, target_y + Rect_temp.height / 2), 10, Scalar(255, 0, 0, 255), 2, 8, 0);
+			circle(source, Point(target_x - Rect_temp.width / 2, target_y - Rect_temp.height / 2), 10, Scalar(255, 0, 0, 255), 2, 8, 0);
+			circle(source, Point(target_x + Rect_temp.width / 2, target_y - Rect_temp.height / 2), 10, Scalar(255, 0, 0, 255), 2, 8, 0);
+			circle(source, Point(target_x - Rect_temp.width / 2, target_y + Rect_temp.height / 2), 10, Scalar(255, 0, 0, 255), 2, 8, 0);
+			//imshow("弹盒识别", source);
 			if (target_x < 160)
 			{
 				serial_conn_0.Serial_Write("j");//车子可以向左前进
+				printf_s("7车子可以向左前进\n");
 			}
 			else if (target_x > 160)
 			{
 				serial_conn_0.Serial_Write("k");//车子可以向右前进
+				printf_s("7车子可以向右前进\n");
 			}
 			else
 			{
 				serial_conn_0.Serial_Write("l");//车子可以继续前进
+				printf_s("7车子可以继续前进\n");
 			}
-			break;
+		}
+		else
+		{
+			serial_conn_0.Serial_Write("m");//车子随机前进
+			printf_s("车子随机前进\n");
 		}
 	}
 	else
 	{
-		serial_conn_0.Serial_Write("m");//车子随机前进
+		switch (sensor_statue)
+		{
+		default:
+			serial_conn_0.Serial_Write("m");//车子随机前进
+			printf_s("%d车子随机前进\n", sensor_statue);
+			break;
+		case 1:
+			serial_conn_0.Serial_Write("l");//传感器左正对目标
+			printf_s("1传感器左正对目标\n");
+			break;
+		case 2:
+			serial_conn_0.Serial_Write("e");//传感器左正对目标
+			printf_s("2传感器左正对目标\n");
+			break;
+		case 3:
+			serial_conn_0.Serial_Write("f");//传感器右正对目标
+			printf_s("3传感器右正对目标\n");
+			break;
+		case 4:
+			serial_conn_0.Serial_Write("g");//目标在传感器左侧
+			printf_s("4目标在传感器左侧\n");
+			break;
+		case 5:
+			serial_conn_0.Serial_Write("h");//目标在传感器右侧
+			printf_s("5目标在传感器右侧\n");
+			break;
+		case 6:
+			serial_conn_0.Serial_Write("i");//车在弹箱角处
+			printf_s("6车在弹箱角处\n");
+			break;
+		}
 	}
+	imshow("弹盒识别", source);
 	return 0;
 }
 
@@ -441,23 +475,23 @@ int main()
 
 	if (!capture.isOpened())
 	{
-		printf_s("1号摄像头连接失败！");
+		printf_s("1号摄像头连接失败！\n");
 		scanf_s(&switch_0);
 		return -1;
 	}
 	else
 	{
-		printf_s("1号摄像头连接成功！");
+		printf_s("1号摄像头连接成功！\n");
 	}
 	if (!capture2.isOpened())
 	{
-		printf_s("2号摄像头连接失败！");
+		printf_s("2号摄像头连接失败！\n");
 		scanf_s(&switch_0);
 		return -1;
 	}
 	else
 	{
-		printf_s("2号摄像头连接成功！");
+		printf_s("2号摄像头连接成功！\n");
 	}
 
 	bool stop = false;
@@ -472,24 +506,24 @@ int main()
 	int serial=serial_conn_0.Serial_Init();//初始化梯形板串口
 	if (serial == 0)
 	{
-		printf_s("梯形板串口打开成功！");
+		printf_s("梯形板串口打开成功！\n");
 		
 	}
 	else
 	{
-		printf_s("梯形板串口打开失败！");
+		printf_s("梯形板串口打开失败！\n");
 		scanf_s(&switch_0);
 	}
 
 	serial = serial_conn_1.Serial_Init();//初始化Arduino串口
 	if (serial == 0)
 	{
-		printf_s("Arduino板串口打开成功！");
+		printf_s("Arduino板串口打开成功！\n");
 
 	}
 	else
 	{
-		printf_s("Arduino板串口打开失败！");
+		printf_s("Arduino板串口打开失败！\n");
 		scanf_s(&switch_0);
 	}
 
@@ -497,39 +531,24 @@ int main()
 
 	while (!stop)
 	{
-		statue = trans_str.char_to_int(serial_conn_1.Serial_Read());
+		/*statue = trans_str.char_to_int(serial_conn_1.Serial_Read());
 		if (statue == 0)
 		{
 			capture >> source;
 			Target_Find(source);
 		}
 		else
-		{
+		{*/
 			capture2 >> source;
-			Bullet_Box(source, statue);
-		}
+			//Bullet_Box(source, statue);
+			Bullet_Box(source, 8);
+		/*}*/
 		waitKey(33);
 	}
 
 	serial_conn_0.Serial_Close();
 	serial_conn_1.Serial_Close();
-	printf_s("程序即将退出！");
-	
-	//int serial = serial_conn_1.Serial_Init();//初始化Arduino串口
-	//if (serial == 0)
-	//{
-	//	printf_s("Arduino板串口打开成功！");
-
-	//}
-	//else
-	//{
-	//	printf_s("Arduino板串口打开失败！");
-	//}
-	//while (1)
-	//{
-	//	int statue = trans_str.char_to_int(serial_conn_1.Serial_Read());
-	//	printf_s("%c",statue);
-	//}
+	printf_s("程序即将退出！\n");
 
 	return 0;
 }
